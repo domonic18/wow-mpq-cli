@@ -28,14 +28,6 @@ configure: ## Configure cmake build (debug, with compile_commands.json)
 		-DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
 		-DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)"
 
-build/compile_commands.json: CMakeLists.txt src/CMakeLists.txt
-	cmake -B build \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-		-DBUILD_MPQCLI=$(BUILD_MPQCLI) \
-		-DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
-		-DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)"
-
 .PHONY: build
 build: ## Build via cmake
 	cmake --build build
@@ -111,39 +103,21 @@ fmt: ## Auto-fix C++ formatting with clang-format
 	| xargs clang-format-$(CLANG_VERSION) -i
 
 .PHONY: lint_cpp
-lint_cpp: build/compile_commands.json ## Run clang-tidy static analysis
-	clang-tidy-$(CLANG_VERSION) \
-	--quiet -p build --header-filter="$(CURDIR)/src/.*" src/*.cpp
+lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
+	clang-tidy-$(CLANG_VERSION) --quiet -p build \
+	--header-filter="$(CURDIR)/src/.*" src/*.cpp 2>&1 \
+	| grep -v " warnings generated"; \
+	exit $${PIPESTATUS[0]}
 
 .PHONY: lint
 lint: fmt_check lint_cpp ## Run all C++ linters
 
 .PHONY: ci
-ci: fmt_check lint_cpp test ## Run all CI checks locally
+ci: configure build fmt_check lint_cpp test ## Run all CI checks locally
 
 # CLEAN
 .PHONY: clean
 clean: build_clean test_clean ## Remove all build and test artifacts
-
-# SUBMODULES
-.PHONY: bump_stormlib
-bump_stormlib: ## Bump StormLib submodule to latest remote
-	@read -rp "[*] Bump StormLib? (y/N) " yn; \
-	case $$yn in \
-		[yY] ) git submodule update --init --remote extern/StormLib;; \
-		* ) echo "[*] Skipping...";; \
-	esac
-
-.PHONY: bump_cli11
-bump_cli11: ## Bump CLI11 submodule to latest remote
-	@read -rp "[*] Bump CLI11? (y/N) " yn; \
-	case $$yn in \
-		[yY] ) git submodule update --init --remote extern/CLI11;; \
-		* ) echo "[*] Skipping...";; \
-	esac
-
-.PHONY: bump_submodules
-bump_submodules: bump_stormlib bump_cli11 ## Bump all submodules to latest remote
 
 # GET
 .PHONY: get_project_version

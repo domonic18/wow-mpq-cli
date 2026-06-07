@@ -7,6 +7,7 @@
 #include <CLI/CLI.hpp>
 
 #include "commands.h"
+#include "completion.h"
 #include "gamerules.h"
 #include "validators.h"
 
@@ -213,13 +214,23 @@ int main(int argc, char **argv) {
         ->check(CLI::ExistingFile);
     verify->add_flag("-p,--print", verifyPrintSignature, "Print the digital signature (in hex)");
 
-    // Subcommand: compact
+    // Subcommand: Compact
     CLI::App *compact = app.add_subcommand("compact", "Compact the MPQ archive");
     compact->add_option("target", baseTarget, "Target MPQ archive")
         ->required()
         ->check(CLI::ExistingFile);
     compact->add_option("-l,--listfile", baseListfileName, "File listing content of an MPQ archive")
         ->check(CLI::ExistingFile);
+
+    // Subcommand: Completion
+    CLI::App *completion = app.add_subcommand("completion", "Generate shell completion script");
+    CLI::App *completionBash =
+        completion->add_subcommand("bash", "Generate bash completion script");
+    CLI::App *completionZsh = completion->add_subcommand("zsh", "Generate zsh completion script");
+    CLI::App *completionPs =
+        completion->add_subcommand("powershell", "Generate PowerShell completion script");
+    CLI::App *completionFish =
+        completion->add_subcommand("fish", "Generate fish completion script");
 
     try {
         app.parse(argc, argv);
@@ -305,6 +316,27 @@ int main(int argc, char **argv) {
 
     if (app.got_subcommand(compact)) {
         return HandleCompact(baseTarget, baseListfileName);
+    }
+
+    if (app.got_subcommand(completion)) {
+        if (completion->got_subcommand(completionBash)) {
+            HandleCompletionBash();
+            return 0;
+        }
+        if (completion->got_subcommand(completionZsh)) {
+            HandleCompletionZsh();
+            return 0;
+        }
+        if (completion->got_subcommand(completionPs)) {
+            HandleCompletionPs();
+            return 0;
+        }
+        if (completion->got_subcommand(completionFish)) {
+            HandleCompletionFish();
+            return 0;
+        }
+        std::cerr << completion->help();
+        return 1;
     }
 
     return 0;
