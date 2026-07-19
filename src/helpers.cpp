@@ -20,7 +20,7 @@ std::string FileTimeToLsTime(int64_t file_time) {
         return "";
     }
     constexpr int64_t epoch_diff = 11644473600LL;
-    int64_t unix_time = (file_time / 10000000) - epoch_diff;
+    time_t unix_time = static_cast<time_t>((file_time / 10000000) - epoch_diff);
     char buf[20];
     struct tm tm_buf;
 #ifdef _WIN32
